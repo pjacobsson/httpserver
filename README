@@ -1,0 +1,6 @@
+
+To compile:
+
+g++ -I/opt/local/include server.cc
+
+Requires boost::shared_ptr to work.
