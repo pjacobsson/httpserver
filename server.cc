@@ -13,9 +13,17 @@
 #include <sys/event.h>
 #include <sys/time.h>
 
+#include "http-parser.cc"
+
 using namespace std;
 
-class RequestProcessor {
+// TODO: Configuration
+// TODO: Logging
+// TODO: Error handling
+// TODO: Timeouts
+// TODO: More HTTP
+
+class DummyRequestProcessor {
 public:
   void SendData(char data[], int len) {
     data[len] = 0; // Null out final for display purposes
@@ -30,17 +38,42 @@ public:
     return kResponse;
   }
 
-  RequestProcessor() {}
+  DummyRequestProcessor() {}
 
 private:
   static const char* kResponse;
 
-  RequestProcessor(const RequestProcessor&);
-  RequestProcessor& operator=(const RequestProcessor&);
-
+  DummyRequestProcessor(const DummyRequestProcessor&);
+  DummyRequestProcessor& operator=(const DummyRequestProcessor&);
 };
 
-const char* RequestProcessor::kResponse = "Done!";
+const char* DummyRequestProcessor::kResponse = "Done!";
+
+class HttpRequestProcessor {
+public:
+  void SendData(char data[], int len) {
+    cout << "Received: [" << data << "] (" << len << " characters)" << endl;
+    complete_ = parser_.Parse(data, len);
+  }
+
+  bool IsComplete() {
+    return complete_;
+  }
+
+  const char* GetResponse() {
+    //    return "<html><h1>Hello, world</h1></html>";
+    return "<h1>hello!</h1>";
+  }
+
+  HttpRequestProcessor(): complete_(false) {}
+
+private:
+  HttpParser parser_;
+  bool complete_;
+
+  HttpRequestProcessor(const HttpRequestProcessor&);
+  HttpRequestProcessor& operator=(const HttpRequestProcessor&);
+};
 
 // TODO: Custom client that sends request slower to test this?
 int respond(int client_socket, int available_bytes) {
@@ -56,7 +89,7 @@ int respond(int client_socket, int available_bytes) {
     }
   }
 
-  RequestProcessor processor;
+  HttpRequestProcessor processor;
 
   if (total_read == 0) {
     cout << "Client socket closed." << endl;
@@ -64,7 +97,12 @@ int respond(int client_socket, int available_bytes) {
   } else {
     processor.SendData(data, total_read);
     if (processor.IsComplete()) {
-      write(client_socket, processor.GetResponse(), sizeof(processor.GetResponse()) + 1);
+      const char* response = processor.GetResponse();
+      const string status_line = "HTTP/1.1 200 OK\r\n";
+      write(client_socket, status_line.c_str(), status_line.length());
+      write(client_socket, "\r\n", 2);
+      write(client_socket, response, strlen(response));
+      return -1;
     }
     return total_read;
   }
@@ -103,11 +141,13 @@ public:
 
       cout << "Data on client socket " << client_socket << endl;
       int number_read = respond(client_socket, event.data);
-      if (number_read == 0) {
+      // TODO: Smarter mechanism here
+      if (number_read == 0 || number_read == -1) {
 	close(client_socket);
 	struct kevent close_event;
 	bzero(&close_event, sizeof(close_event));
 	EV_SET(&close_event, client_socket, EVFILT_READ, EV_DELETE, 0, 0, NULL);
+	int result = kevent(queue, &close_event, 1, NULL, 0, NULL);
       }
     }
     close(queue);
@@ -140,9 +180,6 @@ void* do_work_proxy(void *arg) {
   ((Worker*) arg)->DoWork();
 }
 
-// TODO: Configuration
-// TODO: Logging, error handling
-// TODO: Timeouts
 int main() {
   cout << "Simple select server starting..." << endl;
 
