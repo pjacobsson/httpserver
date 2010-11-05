@@ -23,32 +23,6 @@ using namespace std;
 // TODO: Timeouts
 // TODO: More HTTP
 
-class DummyRequestProcessor {
-public:
-  void SendData(char data[], int len) {
-    data[len] = 0; // Null out final for display purposes
-    cout << "Received: [" << data << "] (" << len << " characters)" << endl;
-  }
-
-  bool IsComplete() {
-    return true;
-  }
-
-  const char* GetResponse() {
-    return kResponse;
-  }
-
-  DummyRequestProcessor() {}
-
-private:
-  static const char* kResponse;
-
-  DummyRequestProcessor(const DummyRequestProcessor&);
-  DummyRequestProcessor& operator=(const DummyRequestProcessor&);
-};
-
-const char* DummyRequestProcessor::kResponse = "Done!";
-
 class HttpRequestProcessor {
 public:
   void SendData(char data[], int len) {
