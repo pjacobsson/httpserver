@@ -48,7 +48,8 @@ namespace server {
       cout << "Error! fd " << fd << " was not registered" << endl;
       return;
     }
-    client_it->second->Run(this, number_of_bytes);
+    cout << "Number of bytes " << number_of_bytes << endl;
+    work_queue_.AddTask(client_it->second, this, number_of_bytes);
   }
 
   void KQueueServer::Unregister(int fd) {
@@ -104,6 +105,13 @@ namespace server {
   }
 
   // ----------- Listen task
+
+  void* WorkerThread(void *arg) {
+    while (true) {
+      ((WorkQueue*) arg)->RunNextTask();
+      cout << "Worker thread looping." << endl;
+    }
+  }
 
   void ListenTask::Initialize() {
     cout << "Listen task initializing..." << endl;
@@ -164,7 +172,7 @@ namespace server {
       int number_read = read(client_fd_, data, available_bytes);
       cout << "Read " << number_read << " / " << available_bytes << " bytes." << endl;
       total_read += number_read;
-      if (number_read == 0 || number_read == available_bytes) {
+      if (number_read < 0 || number_read == available_bytes) {
 	break;
       }
     }
@@ -183,6 +191,8 @@ namespace server {
 	write(client_fd_, status_line.c_str(), status_line.length());
 	write(client_fd_, "\r\n", 2);
 	write(client_fd_, response.c_str(), response.length());
+
+	cout << "Wrote response." << endl;
 
 	close(client_fd_);
 	queue->Unregister(client_fd_);
