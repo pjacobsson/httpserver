@@ -1,9 +1,11 @@
 
 #include "kqueue-server.h"
+#include "http-tasks.h"
 
 #include <pthread.h>
 
 using namespace server;
+using namespace http_tasks;
 
 void* do_work_proxy(void *arg) {
   ((KQueueServer*) arg)->Run();
@@ -11,12 +13,12 @@ void* do_work_proxy(void *arg) {
 
 int main() {
   cout << "Simple server starting..." << endl;
-  // TODO: Needs to support more signals
+  // TODO: Needs to support all relevant signals
   signal(SIGINT, SIG_IGN);
 
   RoutingKQueueServer router;
   KQueueServer server;
-  ListenTask listen_task;
+  HttpListenTask listen_task;
   listen_task.Initialize();
   router.Initialize();
   server.Initialize();

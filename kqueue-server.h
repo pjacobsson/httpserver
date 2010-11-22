@@ -10,35 +10,28 @@ using namespace std;
 
 namespace server {
 
-  class ClientTask;
-  class ListenTask;
+  class Queue;
+
+  // TODO: Better name?
+  // TODO: Move HTTP implementation to other file
+  class ClientTask {
+  public:
+    virtual void Initialize() = 0;
+    virtual void Run(Queue* queue, int available_bytes) = 0;
+  };
+
+  class ListenTask {
+  public:
+    virtual void Initialize() = 0;
+    virtual void Run(Queue* queue) = 0;
+    virtual int ListenFd() = 0;
+  };
 
   class Queue {
   public:
     virtual void Register(int fd, ClientTask* task) = 0;
     virtual void Register(int fd, ListenTask* task) = 0;
     virtual void Unregister(int fd) = 0;
-  };
-
-  // TODO: Better name?
-  // TODO: Move HTTP implementation to other file
-  class ClientTask {
-  public:
-    ClientTask(int fd);
-    void Initialize();
-    void Run(Queue* queue, int available_bytes);
-  private:
-    int client_fd_;
-    HttpParser http_parser_;
-  };
-
-  class ListenTask {
-  public:
-    void Initialize();
-    void Run(Queue* queue);
-    int ListenFd();
-  private:
-    int listen_fd_;
   };
 
   class KQueueServer: public Queue {
