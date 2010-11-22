@@ -8,13 +8,13 @@
 
 namespace http_tasks {
 
-  HttpClientTask::HttpClientTask(int client_fd): client_fd_(client_fd) {
+  HttpTask::HttpTask(int client_fd): client_fd_(client_fd) {
   }
 
-  void HttpClientTask::Initialize() {
+  void HttpTask::Initialize() {
   }
 
-  void HttpClientTask::Run(Queue* queue, int available_bytes) {
+  void HttpTask::Run(Queue* queue, int available_bytes) {
     cout << "Client task running..." << endl;
     cout << "Data on client socket " << client_fd_ << endl;
     char data[available_bytes];
@@ -86,7 +86,7 @@ namespace http_tasks {
     bzero(&client_address, client_address_length);
     int incoming_fd = accept(listen_fd_, (sockaddr*) &client_address, &client_address_length);
     cout << "New connection accepted"<< endl;
-    HttpClientTask* client_task = new HttpClientTask(incoming_fd);
+    HttpTask* client_task = new HttpTask(incoming_fd);
     client_task->Initialize();
     queue->Register(incoming_fd, client_task);
   }

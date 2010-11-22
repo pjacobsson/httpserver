@@ -12,7 +12,7 @@ using namespace std;
 // TODO: Switch lock / unlock to RIAA or maybe a threadsafe collection?
 namespace server {
 
-  void KQueueServer::Register(int fd, ClientTask* task) {
+  void KQueueServer::Register(int fd, Task* task) {
     cout << "Adding client task" << endl;
     struct kevent client_event;
     bzero(&client_event, sizeof(client_event));
@@ -45,7 +45,7 @@ namespace server {
       return;
     }
     pthread_mutex_lock(&client_tasks_mutex_);
-    map<int, ClientTask*>::iterator client_it = client_tasks_.find(fd);
+    map<int, Task*>::iterator client_it = client_tasks_.find(fd);
     pthread_mutex_unlock(&client_tasks_mutex_);
     if (client_it == client_tasks_.end()) {
       cout << "Error! fd " << fd << " was not registered" << endl;
@@ -67,7 +67,7 @@ namespace server {
     pthread_mutex_unlock(&listen_tasks_mutex_);
 
     pthread_mutex_lock(&client_tasks_mutex_);
-    map<int, ClientTask*>::iterator client_it = client_tasks_.find(fd);
+    map<int, Task*>::iterator client_it = client_tasks_.find(fd);
     if (client_it != client_tasks_.end()) {
       client_tasks_.erase(client_it);
       pthread_mutex_lock(&completed_client_tasks_mutex_);
@@ -145,7 +145,7 @@ namespace server {
   RoutingKQueueServer::RoutingKQueueServer(): next_server_(-1) {
   }
 
-  void RoutingKQueueServer::Register(int fd, ClientTask* task) {
+  void RoutingKQueueServer::Register(int fd, Task* task) {
     NextServer();
     if (next_server_ == 0) {
       this->KQueueServer::Register(fd, task);

@@ -13,8 +13,7 @@ namespace server {
   class Queue;
 
   // TODO: Better name?
-  // TODO: Move HTTP implementation to other file
-  class ClientTask {
+  class Task {
   public:
     virtual void Initialize() = 0;
     virtual void Run(Queue* queue, int available_bytes) = 0;
@@ -29,14 +28,14 @@ namespace server {
 
   class Queue {
   public:
-    virtual void Register(int fd, ClientTask* task) = 0;
+    virtual void Register(int fd, Task* task) = 0;
     virtual void Register(int fd, ListenTask* task) = 0;
     virtual void Unregister(int fd) = 0;
   };
 
   class KQueueServer: public Queue {
   public:
-    virtual void Register(int fd, ClientTask* task);
+    virtual void Register(int fd, Task* task);
     virtual void Register(int fd, ListenTask* task);
     virtual void Unregister(int fd);
 
@@ -49,11 +48,11 @@ namespace server {
 
     int queue_;
 
-    map<int, ClientTask*> client_tasks_;
+    map<int, Task*> client_tasks_;
     pthread_mutex_t client_tasks_mutex_;
     map<int, ListenTask*> listen_tasks_;
     pthread_mutex_t listen_tasks_mutex_;
-    vector<ClientTask*> completed_client_tasks_;
+    vector<Task*> completed_client_tasks_;
     pthread_mutex_t completed_client_tasks_mutex_;
     vector<ListenTask*> completed_listen_tasks_;
     pthread_mutex_t completed_listen_tasks_mutex_;
@@ -66,7 +65,7 @@ namespace server {
   class RoutingKQueueServer: public KQueueServer {
   public:
     RoutingKQueueServer();
-    void Register(int fd, ClientTask* task);
+    void Register(int fd, Task* task);
     void Register(int fd, ListenTask* task);
     void AddServer(KQueueServer* server);
   private:

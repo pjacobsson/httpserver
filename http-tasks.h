@@ -5,9 +5,9 @@ using namespace server;
 
 namespace http_tasks {
 
-  class HttpClientTask: public ClientTask {
+  class HttpTask: public Task {
   public:
-    HttpClientTask(int fd);
+    HttpTask(int fd);
     void Initialize();
     void Run(Queue* queue, int available_bytes);
   private:
