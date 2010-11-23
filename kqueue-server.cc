@@ -12,8 +12,18 @@ using namespace std;
 // TODO: Switch lock / unlock to RIAA or maybe a threadsafe collection?
 namespace server {
 
-  void KQueueServer::Register(int fd, Task* task) {
+  const char KQueueServer::kZero = 0;
+
+  void KQueueServer::Register(Task* task) {
     cout << "Adding client task" << endl;
+    pthread_mutex_lock(&ready_tasks_mutex_);
+    ready_tasks_.push_back(task);
+    write(ready_tasks_pipe_write_, &kZero, 1);
+    pthread_mutex_unlock(&ready_tasks_mutex_);
+  }
+
+  void KQueueServer::Register(int fd, Task* task) {
+    cout << "Adding client task waiting for fd" << fd << endl;
     struct kevent client_event;
     bzero(&client_event, sizeof(client_event));
     EV_SET(&client_event, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -96,12 +106,27 @@ namespace server {
     } else {
       cout << "kqueue initialized" << endl;
     }
+
     pthread_mutex_init(&client_tasks_mutex_, NULL);
     pthread_mutex_init(&listen_tasks_mutex_, NULL);
     pthread_mutex_init(&completed_client_tasks_mutex_, NULL);
     pthread_mutex_init(&completed_listen_tasks_mutex_, NULL);
 
     RegisterSigint();
+
+
+    int pipe_fd[2];
+    if (pipe(pipe_fd) != 0) {
+      cout << "Failed to create pipes";
+    };
+    ready_tasks_pipe_read_ = pipe_fd[0];
+    ready_tasks_pipe_write_ = pipe_fd[1];
+    cout << "Pipes initalized" << endl;
+
+    struct kevent pipe_event;
+    bzero(&pipe_event, sizeof(pipe_event));
+    EV_SET(&pipe_event, ready_tasks_pipe_read_, EVFILT_READ, EV_ADD, 0, 0, NULL);
+    int result = kevent(queue_, &pipe_event, 1, NULL, 0, NULL);
   }
 
   void KQueueServer::CollectGarbage() {
@@ -132,6 +157,23 @@ namespace server {
       if (event.ident == SIGINT) {
 	cout << "Shutting down worker..." << endl;
 	break;
+      }
+
+      if (event.ident == ready_tasks_pipe_read_) {
+	pthread_mutex_lock(&ready_tasks_mutex_);
+	char buffer[1];
+	read(ready_tasks_pipe_read_, buffer, 1);
+	Task* ready_task = NULL;
+	if (ready_tasks_.size() > 0) {
+	  ready_task = ready_tasks_.back();
+	  ready_tasks_.pop_back();
+	}
+	pthread_mutex_unlock(&ready_tasks_mutex_);
+
+	if (ready_task != NULL) {
+	  ready_task->Run(this, -1);
+	  continue;
+	}
       }
 
       cout << "Incoming event" << endl;

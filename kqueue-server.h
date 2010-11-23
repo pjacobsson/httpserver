@@ -28,6 +28,7 @@ namespace server {
 
   class Queue {
   public:
+    virtual void Register(Task* task) = 0;
     virtual void Register(int fd, Task* task) = 0;
     virtual void Register(int fd, ListenTask* task) = 0;
     virtual void Unregister(int fd) = 0;
@@ -35,6 +36,7 @@ namespace server {
 
   class KQueueServer: public Queue {
   public:
+    virtual void Register(Task* task);
     virtual void Register(int fd, Task* task);
     virtual void Register(int fd, ListenTask* task);
     virtual void Unregister(int fd);
@@ -42,16 +44,25 @@ namespace server {
     void Initialize();
     void Run();
   private:
+    static const char kZero;
+
     void Notify(int fd, int number_of_bytes);
     void RegisterSigint();
     void CollectGarbage();
 
     int queue_;
 
+    int ready_tasks_pipe_read_;
+    int ready_tasks_pipe_write_;
+    pthread_mutex_t ready_tasks_mutex_;
+    vector<Task*> ready_tasks_;
+
     map<int, Task*> client_tasks_;
     pthread_mutex_t client_tasks_mutex_;
+
     map<int, ListenTask*> listen_tasks_;
     pthread_mutex_t listen_tasks_mutex_;
+
     vector<Task*> completed_client_tasks_;
     pthread_mutex_t completed_client_tasks_mutex_;
     vector<ListenTask*> completed_listen_tasks_;

@@ -9,6 +9,7 @@
 namespace http_tasks {
 
   HttpTask::HttpTask(int client_fd): client_fd_(client_fd) {
+    http_parser_ = new HttpParser();
   }
 
   void HttpTask::Initialize() {
@@ -28,31 +29,45 @@ namespace http_tasks {
 	break;
       }
     }
-
     cout << "Data read " << data << endl;
 
     if (total_read == 0) {
       cout << "Error: Client socket closed during reading." << endl;
       close(client_fd_);
     } else {
-      if (http_parser_.Parse(data, available_bytes)) {
-	const HttpRequest& request = http_parser_.GetHttpRequest();
-
-	const string status_line = "HTTP/1.1 200 OK\r\n";
-	const string response = "<h1>Hello, world!</h1>";
-	write(client_fd_, status_line.c_str(), status_line.length());
-	write(client_fd_, "\r\n", 2);
-	write(client_fd_, response.c_str(), response.length());
-
-	cout << "Wrote response." << endl;
-
-	close(client_fd_);
+      if (http_parser_->Parse(data, available_bytes)) {
 	queue->Unregister(client_fd_);
+	HttpResponseTask* response_task = new HttpResponseTask(client_fd_, http_parser_);
+	queue->Register(response_task);
       } else {
 	cout << "Incomplete data, wait for more." << endl;
       }
     }
   }
+
+
+  HttpResponseTask::HttpResponseTask(int fd, HttpParser* http_parser): client_fd_(fd),
+								       http_parser_(http_parser) {
+    cout << "HttpResponseTask created" << endl;
+  }
+
+  void HttpResponseTask::Initialize() {
+  }
+
+  void HttpResponseTask::Run(Queue* queue, int ignore) {
+    const HttpRequest& request = http_parser_->GetHttpRequest();
+
+    const string status_line = "HTTP/1.1 200 OK\r\n";
+    const string response = "<h1>Hello, world!</h1>";
+    write(client_fd_, status_line.c_str(), status_line.length());
+    write(client_fd_, "\r\n", 2);
+    write(client_fd_, response.c_str(), response.length());
+    cout << "Wrote response." << endl;
+
+    close(client_fd_);
+    delete http_parser_;
+  }
+
 
   void HttpListenTask::Initialize() {
     cout << "Listen task initializing..." << endl;
