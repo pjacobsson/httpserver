@@ -180,6 +180,8 @@ namespace server {
       Notify(event.ident, event.data);
     }
     close(queue_);
+    close(ready_tasks_pipe_read_);
+    close(ready_tasks_pipe_write_);
   }
 
   // ----------- RoutingKQueueServer

@@ -38,6 +38,7 @@ namespace http_tasks {
       if (http_parser_->Parse(data, available_bytes)) {
 	queue->Unregister(client_fd_);
 	HttpResponseTask* response_task = new HttpResponseTask(client_fd_, http_parser_);
+	response_task->Initialize();
 	queue->Register(response_task);
       } else {
 	cout << "Incomplete data, wait for more." << endl;
@@ -45,7 +46,7 @@ namespace http_tasks {
     }
   }
 
-
+  // Takes ownership of the http_parser
   HttpResponseTask::HttpResponseTask(int fd, HttpParser* http_parser): client_fd_(fd),
 								       http_parser_(http_parser) {
     cout << "HttpResponseTask created" << endl;
@@ -55,6 +56,7 @@ namespace http_tasks {
   }
 
   void HttpResponseTask::Run(Queue* queue, int ignore) {
+    cout << "HttpResponseTask executing" << endl;
     const HttpRequest& request = http_parser_->GetHttpRequest();
 
     const string status_line = "HTTP/1.1 200 OK\r\n";
@@ -67,7 +69,6 @@ namespace http_tasks {
     close(client_fd_);
     delete http_parser_;
   }
-
 
   void HttpListenTask::Initialize() {
     cout << "Listen task initializing..." << endl;
