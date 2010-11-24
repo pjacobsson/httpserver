@@ -1,1 +1,1 @@
-g++ -o server kqueue-server.cc http-tasks.cc server-main.cc
+g++ -o server logger.cc kqueue-server.cc http-tasks.cc server-main.cc

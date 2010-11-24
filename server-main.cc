@@ -1,6 +1,7 @@
 
 #include "kqueue-server.h"
 #include "http-tasks.h"
+#include "logger.h"
 
 #include <pthread.h>
 
@@ -12,7 +13,7 @@ void* do_work_proxy(void *arg) {
 }
 
 int main() {
-  cout << "Simple server starting..." << endl;
+  log::Info("Simple server starting...");
   // TODO: Needs to support all relevant signals
   signal(SIGINT, SIG_IGN);
 

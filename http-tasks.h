@@ -1,3 +1,6 @@
+#ifndef HTTP_TASKS_H_
+#define HTTP_TASKS_H_
+
 #include "kqueue-server.h"
 
 using namespace std;
@@ -35,3 +38,5 @@ namespace http_tasks {
   };
 
 }  // namespace http_tasks
+
+#endif  // HTTP_TASKS_H_

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 
+#include "logger.h"
+
 using namespace std;
 
 // TODO: Way too much copying of strings going on here?
@@ -51,14 +53,14 @@ public:
       if (first_in_line &&
 	  current_char == '\r') {
 	current_char = data[++index]; // assume current_char == '\n' now
-	cout << "Blank line" << endl;
+	log::Debug("Blank line");
 	break;
       }
 
       switch (current_state) {
       case REQUEST_TYPE:
 	if (current_char == ' ') {
-	  cout << "Request [" << field << "]" << endl;
+	  log::Debug("Request [%s]", field.c_str());
 	  request.SetRequestType(field);
 	  field = "";
 	  current_state = PATH;
@@ -68,7 +70,7 @@ public:
 	break;
       case PATH:
 	if (current_char == ' ') {
-	  cout << "Path [" << field << "]" << endl;
+          log::Debug("Path [%s]", field.c_str());
 	  request.SetPath(field);
 	  field = "";
 	  current_state = PROTOCOL;
@@ -78,7 +80,7 @@ public:
 	break;
       case PROTOCOL:
 	if (current_char == '\n') {
-	  cout << "Protocol [" << field << "]" << endl;
+	  log::Debug("Protocol [%s]", field.c_str());
 	  field = "";
 	  current_state = HEADER_KEY;
 	} else {
@@ -87,7 +89,7 @@ public:
 	break;
       case HEADER_KEY:
 	if (current_char == ':') {
-	  cout << "Header key [" << field << "]" << endl;
+	  log::Debug("Header key [%s]", field.c_str());
 	  field = "";
 	  current_state = HEADER_DELIM;
 	} else {
@@ -95,18 +97,18 @@ public:
 	}
 	break;
       case HEADER_DELIM:
-	cout << "Header delim [" << current_char << "]" << endl;
+	log::Debug("Header delim [%d]", current_char);
 	if (current_char == ' ') {
 	  field = "";
 	  current_state = HEADER_VALUE;
 	} else {
-	  cout << "Unexpected header delim!" << endl;
+	  log::Error("Unexpected header delim!");
 	}
 	break;
       case HEADER_VALUE:
 	if (current_char == '\r') {
 	  current_char = data[++index]; // assume current_char == '\n' now
-	  cout << "Header value [" << field << "]" << endl;
+	  log::Debug("Header value [%s]", field.c_str());
 	  field = "";
 	  current_state = HEADER_KEY;
 	} else {
@@ -116,7 +118,7 @@ public:
       }
       index++;
       if (index == length) {
-	cout << "Needs more data" << endl;
+	log::Debug("Needs more data");
 	return false;
       }
     }

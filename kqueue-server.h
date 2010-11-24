@@ -12,7 +12,6 @@ namespace server {
 
   class Queue;
 
-  // TODO: Better name?
   class Task {
   public:
     virtual void Initialize() = 0;

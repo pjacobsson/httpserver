@@ -6,6 +6,7 @@
 #include <sys/event.h>
 
 #include "kqueue-server.h"
+#include "logger.h"
 
 using namespace std;
 
@@ -15,7 +16,7 @@ namespace server {
   const char KQueueServer::kZero = 0;
 
   void KQueueServer::Register(Task* task) {
-    cout << "Adding client task" << endl;
+    log::Debug("Adding client task");
     pthread_mutex_lock(&ready_tasks_mutex_);
     ready_tasks_.push_back(task);
     write(ready_tasks_pipe_write_, &kZero, 1);
@@ -23,16 +24,16 @@ namespace server {
   }
 
   void KQueueServer::Register(int fd, Task* task) {
-    cout << "Adding client task waiting for fd" << fd << endl;
+    log::Debug("Adding client task waiting for fd %d", fd);
     struct kevent client_event;
     bzero(&client_event, sizeof(client_event));
     EV_SET(&client_event, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-    cout << "Adding event to kqueue " << queue_ << endl;
+    log::Debug("Adding event to kqueue %d", queue_);
     pthread_mutex_lock(&client_tasks_mutex_);
     client_tasks_[fd] = task;
     pthread_mutex_unlock(&client_tasks_mutex_);
     int result = kevent(queue_, &client_event, 1, NULL, 0, NULL);
-    cout << "Client connected " << fd << endl;
+    log::Debug("Client connected %d", fd);
   }
 
   void KQueueServer::Register(int fd, ListenTask* task) {
@@ -40,7 +41,7 @@ namespace server {
     bzero(&event, sizeof(event));
     EV_SET(&event, fd, EVFILT_READ, EV_ADD, 0, 5, NULL);
     int result = kevent(queue_, &event, 1, NULL, 0, NULL);
-    cout << "Listen event registered " << result << " " << endl;
+    log::Debug("Listen event registered %d", result);
     pthread_mutex_lock(&listen_tasks_mutex_);
     listen_tasks_[fd] = task;
     pthread_mutex_unlock(&listen_tasks_mutex_);
@@ -58,10 +59,10 @@ namespace server {
     map<int, Task*>::iterator client_it = client_tasks_.find(fd);
     pthread_mutex_unlock(&client_tasks_mutex_);
     if (client_it == client_tasks_.end()) {
-      cout << "Error! fd " << fd << " was not registered" << endl;
+      log::Debug("Error! %d was not registered", fd);
       return;
     }
-    cout << "Number of bytes " << number_of_bytes << endl;
+    log::Debug("Number of bytes %d", number_of_bytes);
     client_it->second->Run(this, number_of_bytes);
   }
 
@@ -102,9 +103,9 @@ namespace server {
   void KQueueServer::Initialize() {
     queue_ = kqueue();
     if (queue_ == -1) {
-      cout << "kqueue creation failed." << endl;
+      log::Error("kqueue creation failed.");
     } else {
-      cout << "kqueue initialized" << endl;
+      log::Error("kqueue initialized");
     }
 
     pthread_mutex_init(&client_tasks_mutex_, NULL);
@@ -117,11 +118,11 @@ namespace server {
 
     int pipe_fd[2];
     if (pipe(pipe_fd) != 0) {
-      cout << "Failed to create pipes";
+      log::Error("Failed to create pipes.");
     };
     ready_tasks_pipe_read_ = pipe_fd[0];
     ready_tasks_pipe_write_ = pipe_fd[1];
-    cout << "Pipes initalized" << endl;
+    log::Debug("Pipes initalized");
 
     struct kevent pipe_event;
     bzero(&pipe_event, sizeof(pipe_event));
@@ -151,11 +152,11 @@ namespace server {
 
       struct kevent event;
       bzero(&event, sizeof(event));
-      cout << "Main event loop waiting" << endl;
+      log::Debug("Main event loop waiting");
       int result = kevent(queue_, NULL, 0, &event, 1, NULL);
 
       if (event.ident == SIGINT) {
-	cout << "Shutting down worker..." << endl;
+	log::Info("Shutting down worker...");
 	break;
       }
 
@@ -176,7 +177,7 @@ namespace server {
 	}
       }
 
-      cout << "Incoming event" << endl;
+      log::Debug("Incoming event");
       Notify(event.ident, event.data);
     }
     close(queue_);
@@ -196,7 +197,7 @@ namespace server {
     } else {
       servers_[next_server_ - 1]->Register(fd, task);
     }
-    cout << "Routed client task to server " << next_server_ << endl;
+    log::Debug("Routed client task to server %d", next_server_);
   }
 
   void RoutingKQueueServer::Register(int fd, ListenTask* task) {
@@ -206,16 +207,16 @@ namespace server {
     } else {
       servers_[next_server_ - 1]->Register(fd, task);
     }
-    cout << "Routed listen task to server " << next_server_ << endl;
+    log::Debug("Routed listen task to server %d", next_server_);
   }
 
   void RoutingKQueueServer::NextServer() {
     next_server_ = (next_server_ + 1) % (servers_.size() + 1);
-    cout << "Next server " << next_server_ << endl;
+    log::Debug("Next server %d", next_server_);
   }
 
   void RoutingKQueueServer::AddServer(KQueueServer* server) {
     servers_.push_back(server);
-    cout << "Registered server " << servers_.size() << endl;
+    log::Debug("Registered server %d", servers_.size());
   }
 } // namespace server
