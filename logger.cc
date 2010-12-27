@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+// TODO: Buffer overflow risks here?
 namespace log {
 
   void Debug(const char *fmt, ...) {

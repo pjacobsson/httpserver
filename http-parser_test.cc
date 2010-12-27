@@ -1,7 +1,7 @@
 #include "http-parser.cc"
 
 int main() {
-  cout << "Testing HttpParser..." << endl;
+  log::Debug("Testing HttpParser...");
   HttpParser parser;
   // string data =
   //   "GET / HTTP/1.1\n"
@@ -37,14 +37,16 @@ int main() {
   rest_of_data = "HTTP\n\n";
   bool result = parser.Parse(incomplete_data.c_str(), incomplete_data.length());
   if (result) {
-    cout << "Error! Should require more data!" << endl;
+    log::Error("Error! Should require more data!");
     exit(-1);
   }
   result = parser.Parse(rest_of_data.c_str(), rest_of_data.length());
   if (!result) {
-    cout << "Error! Should be done!" << endl;
+    log::Error("Error! Should be done!");
     exit(-1);
   }
   const HttpRequest& request =  parser.GetHttpRequest();
-  cout << "Found request! type=" << request.GetRequestType() << " path=" << request.GetPath() << endl;
+  log::Debug("Found request! type=%s path=%s",
+	     request.GetRequestType(),
+	     request.GetPath());
 }

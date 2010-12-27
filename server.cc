@@ -35,7 +35,6 @@ public:
   }
 
   const char* GetResponse() {
-    //    return "<html><h1>Hello, world</h1></html>";
     return "<h1>hello!</h1>";
   }
 
