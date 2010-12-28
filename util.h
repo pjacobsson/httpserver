@@ -11,7 +11,7 @@ using namespace std;
 // TODO: Constructors.
 namespace util {
 
-  // Simple threadsafe map.
+  // Simple threadsafe map, storing keys and pointers to values.
   template<class K, class V>
   class SynchronizedMap {
   public:
@@ -49,7 +49,7 @@ namespace util {
     pthread_mutex_t mutex_;
   };
 
-  // Simple threadsafe queue.
+  // Simple threadsafe queue, storing pointers to values.
   template<class T>
   class SynchronizedQueue {
   public:
