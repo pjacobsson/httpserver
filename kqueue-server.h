@@ -4,9 +4,11 @@
 #include <map>
 #include <vector>
 
+#include "util.h"
 #include "http-parser.cc"
 
 using namespace std;
+using namespace util;
 
 namespace server {
 
@@ -45,27 +47,20 @@ namespace server {
   private:
     static const char kZero;
 
-    void Notify(int fd, int number_of_bytes);
+    void ExecuteReadyTask();
+    void ExecuteBlockingTask(int fd, int number_of_bytes);
     void RegisterSigint();
     void CollectGarbage();
 
     int queue_;
-
     int ready_tasks_pipe_read_;
     int ready_tasks_pipe_write_;
-    pthread_mutex_t ready_tasks_mutex_;
-    vector<Task*> ready_tasks_;
 
-    map<int, Task*> client_tasks_;
-    pthread_mutex_t client_tasks_mutex_;
-
-    map<int, ListenTask*> listen_tasks_;
-    pthread_mutex_t listen_tasks_mutex_;
-
-    vector<Task*> completed_client_tasks_;
-    pthread_mutex_t completed_client_tasks_mutex_;
-    vector<ListenTask*> completed_listen_tasks_;
-    pthread_mutex_t completed_listen_tasks_mutex_;
+    SynchronizedQueue<Task> ready_tasks_;
+    SynchronizedMap<int, Task> client_tasks_;
+    SynchronizedMap<int, ListenTask> listen_tasks_;
+    SynchronizedQueue<Task> completed_client_tasks_;
+    SynchronizedQueue<ListenTask> completed_listen_tasks_;
   };
 
   // Acts as a load balancer between other KQueueServer

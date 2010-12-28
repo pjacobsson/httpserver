@@ -10,17 +10,14 @@
 
 using namespace std;
 
-// TODO: Switch lock / unlock to RIAA or maybe a threadsafe collection?
 namespace server {
 
   const char KQueueServer::kZero = 0;
 
   void KQueueServer::Register(Task* task) {
     log::Debug("Adding client task");
-    pthread_mutex_lock(&ready_tasks_mutex_);
-    ready_tasks_.push_back(task);
+    ready_tasks_.Push(task);
     write(ready_tasks_pipe_write_, &kZero, 1);
-    pthread_mutex_unlock(&ready_tasks_mutex_);
   }
 
   void KQueueServer::Register(int fd, Task* task) {
@@ -29,9 +26,7 @@ namespace server {
     bzero(&client_event, sizeof(client_event));
     EV_SET(&client_event, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
     log::Debug("Adding event to kqueue %d", queue_);
-    pthread_mutex_lock(&client_tasks_mutex_);
-    client_tasks_[fd] = task;
-    pthread_mutex_unlock(&client_tasks_mutex_);
+    client_tasks_.Put(fd, task);
     int result = kevent(queue_, &client_event, 1, NULL, 0, NULL);
     log::Debug("Client connected %d", fd);
   }
@@ -42,50 +37,17 @@ namespace server {
     EV_SET(&event, fd, EVFILT_READ, EV_ADD, 0, 5, NULL);
     int result = kevent(queue_, &event, 1, NULL, 0, NULL);
     log::Debug("Listen event registered %d", result);
-    pthread_mutex_lock(&listen_tasks_mutex_);
-    listen_tasks_[fd] = task;
-    pthread_mutex_unlock(&listen_tasks_mutex_);
-  }
-
-  void KQueueServer::Notify(int fd, int number_of_bytes) {
-    pthread_mutex_lock(&listen_tasks_mutex_);
-    map<int, ListenTask*>::iterator listen_it = listen_tasks_.find(fd);
-    pthread_mutex_unlock(&listen_tasks_mutex_);
-    if (listen_it != listen_tasks_.end()) {
-      listen_it->second->Run(this);
-      return;
-    }
-    pthread_mutex_lock(&client_tasks_mutex_);
-    map<int, Task*>::iterator client_it = client_tasks_.find(fd);
-    pthread_mutex_unlock(&client_tasks_mutex_);
-    if (client_it == client_tasks_.end()) {
-      log::Debug("Error! %d was not registered", fd);
-      return;
-    }
-    log::Debug("Number of bytes %d", number_of_bytes);
-    client_it->second->Run(this, number_of_bytes);
+    listen_tasks_.Put(fd, task);
   }
 
   void KQueueServer::Unregister(int fd) {
-    pthread_mutex_lock(&listen_tasks_mutex_);
-    map<int, ListenTask*>::iterator listen_it = listen_tasks_.find(fd);
-    if (listen_it != listen_tasks_.end()) {
-      listen_tasks_.erase(listen_it);
-      pthread_mutex_lock(&completed_listen_tasks_mutex_);
-      completed_listen_tasks_.push_back(listen_it->second);
-      pthread_mutex_unlock(&completed_listen_tasks_mutex_);
-    }
-    pthread_mutex_unlock(&listen_tasks_mutex_);
+    ListenTask* completed_listen_task = listen_tasks_.Get(fd);
+    listen_tasks_.Remove(fd);
+    completed_listen_tasks_.Push(completed_listen_task);
 
-    pthread_mutex_lock(&client_tasks_mutex_);
-    map<int, Task*>::iterator client_it = client_tasks_.find(fd);
-    if (client_it != client_tasks_.end()) {
-      client_tasks_.erase(client_it);
-      pthread_mutex_lock(&completed_client_tasks_mutex_);
-      completed_client_tasks_.push_back(client_it->second);
-      pthread_mutex_unlock(&completed_client_tasks_mutex_);
-    }
-    pthread_mutex_unlock(&client_tasks_mutex_);
+    Task* completed_task = client_tasks_.Get(fd);
+    client_tasks_.Remove(fd);
+    completed_client_tasks_.Push(completed_task);
 
     struct kevent close_event;
     bzero(&close_event, sizeof(close_event));
@@ -108,13 +70,12 @@ namespace server {
       log::Error("kqueue initialized");
     }
 
-    pthread_mutex_init(&client_tasks_mutex_, NULL);
-    pthread_mutex_init(&listen_tasks_mutex_, NULL);
-    pthread_mutex_init(&completed_client_tasks_mutex_, NULL);
-    pthread_mutex_init(&completed_listen_tasks_mutex_, NULL);
+    client_tasks_.Initialize();
+    listen_tasks_.Initialize();
+    completed_client_tasks_.Initialize();
+    completed_listen_tasks_.Initialize();
 
     RegisterSigint();
-
 
     int pipe_fd[2];
     if (pipe(pipe_fd) != 0) {
@@ -131,19 +92,33 @@ namespace server {
   }
 
   void KQueueServer::CollectGarbage() {
-    pthread_mutex_lock(&completed_client_tasks_mutex_);
-    for (int i=0; i<completed_client_tasks_.size(); ++i) {
-      delete completed_client_tasks_[i];
-    }
-    completed_client_tasks_.clear();
-    pthread_mutex_unlock(&completed_client_tasks_mutex_);
+    completed_client_tasks_.Clear();
+    completed_listen_tasks_.Clear();
+  }
 
-    pthread_mutex_lock(&completed_listen_tasks_mutex_);
-    for (int i=0; i<completed_listen_tasks_.size(); ++i) {
-      delete completed_listen_tasks_[i];
+  void KQueueServer::ExecuteBlockingTask(int fd, int number_of_bytes) {
+    ListenTask* listen_task = listen_tasks_.Get(fd);
+    if (listen_task != NULL) {
+      listen_task->Run(this);
+      return;
     }
-    completed_listen_tasks_.clear();
-    pthread_mutex_unlock(&completed_listen_tasks_mutex_);
+
+    Task* task = client_tasks_.Get(fd);
+    if (task == NULL) {
+      log::Debug("Error! %d was not registered", fd);
+      return;
+    }
+    log::Debug("Number of bytes %d", number_of_bytes);
+    task->Run(this, number_of_bytes);
+  }
+
+  void KQueueServer::ExecuteReadyTask() {
+    char buffer[1];
+    read(ready_tasks_pipe_read_, buffer, 1);
+    Task* ready_task = ready_tasks_.Pop();
+    if (ready_task != NULL) {
+      ready_task->Run(this, -1);
+    }
   }
 
   void KQueueServer::Run() {
@@ -161,24 +136,10 @@ namespace server {
       }
 
       if (event.ident == ready_tasks_pipe_read_) {
-	pthread_mutex_lock(&ready_tasks_mutex_);
-	char buffer[1];
-	read(ready_tasks_pipe_read_, buffer, 1);
-	Task* ready_task = NULL;
-	if (ready_tasks_.size() > 0) {
-	  ready_task = ready_tasks_.back();
-	  ready_tasks_.pop_back();
-	}
-	pthread_mutex_unlock(&ready_tasks_mutex_);
-
-	if (ready_task != NULL) {
-	  ready_task->Run(this, -1);
-	  continue;
-	}
+	ExecuteReadyTask();
+      } else {
+	ExecuteBlockingTask(event.ident, event.data);
       }
-
-      log::Debug("Incoming event");
-      Notify(event.ident, event.data);
     }
     close(queue_);
     close(ready_tasks_pipe_read_);
@@ -219,4 +180,5 @@ namespace server {
     servers_.push_back(server);
     log::Debug("Registered server %d", servers_.size());
   }
+
 } // namespace server
