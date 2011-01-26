@@ -90,12 +90,16 @@ namespace server {
     SynchronizedMap<int, ListenTask> listen_tasks_;
     SynchronizedQueue<Task> completed_client_tasks_;
     SynchronizedQueue<ListenTask> completed_listen_tasks_;
+
+    KQueueServer(const KQueueServer&);
+    KQueueServer& operator=(const KQueueServer&);
   };
 
   // Acts as a load balancer between other KQueueServer
   // instances. It either processes each call to 'Register'
   // itself or delegates it to another registered server
-  // in a round-robin fashion.
+  // in a round-robin fashion. This allows multiple threads / cores
+  // to be used to serve requests.
   class RoutingKQueueServer: public KQueueServer {
   public:
     RoutingKQueueServer();
@@ -107,6 +111,9 @@ namespace server {
 
     vector<KQueueServer*> servers_;
     int next_server_;
+
+    RoutingKQueueServer(const RoutingKQueueServer&);
+    RoutingKQueueServer& operator=(const RoutingKQueueServer&);
   };
 
 }  // namespace server
