@@ -8,7 +8,6 @@
 
 using namespace std;
 
-// TODO: Constructors.
 namespace util {
 
   // Simple threadsafe map, storing keys and pointers to values.
