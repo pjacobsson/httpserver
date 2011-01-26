@@ -30,7 +30,7 @@ namespace http_parser {
     path_ = path;
   }
 
-  HttpParser::HttpParser(): index(0), current_state(REQUEST_TYPE), field("") {}
+  HttpParser::HttpParser(): current_state_(REQUEST_TYPE), field_("") {}
 
   bool HttpParser::Parse(const char data[], int length) {
     int index = 0;
@@ -48,50 +48,50 @@ namespace http_parser {
 	break;
       }
 
-      switch (current_state) {
+      switch (current_state_) {
       case REQUEST_TYPE:
 	if (current_char == ' ') {
-	  log::Debug("Request [%s]", field.c_str());
-	  request.SetRequestType(field);
-	  field = "";
-	  current_state = PATH;
+	  log::Debug("Request [%s]", field_.c_str());
+	  request_.SetRequestType(field_);
+	  field_ = "";
+	  current_state_ = PATH;
 	} else {
-	  field.append(1, current_char);
+	  field_.append(1, current_char);
 	}
 	break;
       case PATH:
 	if (current_char == ' ') {
-          log::Debug("Path [%s]", field.c_str());
-	  request.SetPath(field);
-	  field = "";
-	  current_state = PROTOCOL;
+          log::Debug("Path [%s]", field_.c_str());
+	  request_.SetPath(field_);
+	  field_ = "";
+	  current_state_ = PROTOCOL;
 	} else {
-	  field.append(1, current_char);
+	  field_.append(1, current_char);
 	}
 	break;
       case PROTOCOL:
 	if (current_char == '\n') {
-	  log::Debug("Protocol [%s]", field.c_str());
-	  field = "";
-	  current_state = HEADER_KEY;
+	  log::Debug("Protocol [%s]", field_.c_str());
+	  field_ = "";
+	  current_state_ = HEADER_KEY;
 	} else {
-	  field.append(1, current_char);
+	  field_.append(1, current_char);
 	}
 	break;
       case HEADER_KEY:
 	if (current_char == ':') {
-	  log::Debug("Header key [%s]", field.c_str());
-	  field = "";
-	  current_state = HEADER_DELIM;
+	  log::Debug("Header key [%s]", field_.c_str());
+	  field_ = "";
+	  current_state_ = HEADER_DELIM;
 	} else {
-	  field.append(1, current_char);
+	  field_.append(1, current_char);
 	}
 	break;
       case HEADER_DELIM:
 	log::Debug("Header delim [%d]", current_char);
 	if (current_char == ' ') {
-	  field = "";
-	  current_state = HEADER_VALUE;
+	  field_ = "";
+	  current_state_ = HEADER_VALUE;
 	} else {
 	  log::Error("Unexpected header delim!");
 	}
@@ -99,11 +99,11 @@ namespace http_parser {
       case HEADER_VALUE:
 	if (current_char == '\r') {
 	  current_char = data[++index]; // assume current_char == '\n' now
-	  log::Debug("Header value [%s]", field.c_str());
-	  field = "";
-	  current_state = HEADER_KEY;
+	  log::Debug("Header value [%s]", field_.c_str());
+	  field_ = "";
+	  current_state_ = HEADER_KEY;
 	} else {
-	  field.append(1, current_char);
+	  field_.append(1, current_char);
 	}
 	break;
       }
@@ -117,7 +117,7 @@ namespace http_parser {
   }
 
   const HttpRequest& HttpParser::GetHttpRequest() {
-    return request;
+    return request_;
   }
 
 }

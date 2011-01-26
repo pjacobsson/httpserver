@@ -5,6 +5,8 @@
 
 using namespace std;
 
+// TODO: Parser only gets the request method and path. Needs to extract
+// everything.
 namespace http_parser {
 
   class HttpRequest {
@@ -20,11 +22,11 @@ namespace http_parser {
     void SetPath(const string& path);
 
   private:
-    HttpRequest(const HttpRequest&);
-    HttpRequest& operator=(const HttpRequest&);
-
     request_type request_type_;
     string path_;
+
+    HttpRequest(const HttpRequest&);
+    HttpRequest& operator=(const HttpRequest&);
   };
 
   class HttpParser {
@@ -40,10 +42,12 @@ namespace http_parser {
 		 HEADER_DELIM,
 		 HEADER_VALUE };
 
-    int index;
-    state current_state;
-    string field;
-    HttpRequest request;
+    state current_state_;
+    string field_;
+    HttpRequest request_;
+
+    HttpParser(const HttpParser&);
+    HttpParser& operator=(const HttpParser&);
   };
 
 }  // namespace http_parser
