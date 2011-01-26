@@ -1,47 +1,38 @@
 #include <iostream>
 #include <string>
 
+#include "http-parser.h"
 #include "logger.h"
 
 using namespace std;
 
 // TODO: Way too much copying of strings going on here?
 
-class HttpRequest {
-public:
-  enum request_type { GET, POST, PUT, DELETE };
+namespace http_parser {
 
-  const request_type GetRequestType() const {
+  HttpRequest::HttpRequest() {}
+
+  const HttpRequest::request_type HttpRequest::GetRequestType() const {
     return request_type_;
   }
 
-  void SetRequestType(const string& request_type) {
+  void HttpRequest::SetRequestType(const string& request_type) {
     if (request_type == "GET") {
       request_type_ = GET;
     }
   }
 
-  const string& GetPath() const {
+  const string& HttpRequest::GetPath() const {
     return path_;
   }
 
-  void SetPath(const string& path) {
+  void HttpRequest::SetPath(const string& path) {
     path_ = path;
   }
 
-  HttpRequest() {}
+  HttpParser::HttpParser(): index(0), current_state(REQUEST_TYPE), field("") {}
 
-private:
-  HttpRequest(const HttpRequest&);
-  HttpRequest& operator=(const HttpRequest&);
-
-  request_type request_type_;
-  string path_;
-};
-
-class HttpParser {
-public:
-  bool Parse(const char data[], int length) {
+  bool HttpParser::Parse(const char data[], int length) {
     int index = 0;
     bool done = false;
     bool first_in_line;
@@ -125,19 +116,8 @@ public:
     return true;
   }
 
-  const HttpRequest& GetHttpRequest() {
+  const HttpRequest& HttpParser::GetHttpRequest() {
     return request;
   }
 
-  HttpParser(): index(0), current_state(REQUEST_TYPE), field("") {}
-
-private:
-  enum state { REQUEST_TYPE, PATH, PROTOCOL, HEADER_KEY, HEADER_DELIM, HEADER_VALUE, DONE };
-
-  state current_state;
-  int index;
-  string field;
-
-  HttpRequest request;
-};
-
+}

@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "util.h"
-#include "http-parser.cc"
 
 using namespace std;
 using namespace util;
@@ -14,27 +13,56 @@ namespace server {
 
   class Queue;
 
+  // Interface defining a task, the main unit of execution.
   class Task {
   public:
     virtual void Initialize() = 0;
+
+    // Executes this task.
     virtual void Run(Queue* queue, int available_bytes) = 0;
   };
 
+  // Interface defining a listening task, the entry point for clients
+  // connecting to the server. The typical case being a task listening
+  // for new connection to a socket.
   class ListenTask {
   public:
     virtual void Initialize() = 0;
+
+    // Executes this task when there's an incoming request on
+    // the file descriptor. Schedule next tasks on the supplied
+    // queue.
     virtual void Run(Queue* queue) = 0;
+
+    // The file descriptor to listen to.
     virtual int ListenFd() = 0;
   };
 
+  // Main interface for the queueing / scheduling mechanism. Uses
+  // the typical inversion-of-control pattern.
+  // All methods take ownership of the tasks that get passed in.
   class Queue {
   public:
+    // Register a task to be executed asynchronously
     virtual void Register(Task* task) = 0;
+
+    // Register a task that will be executed asynchronously
+    // when there is data available on the specified file
+    // descriptor.
     virtual void Register(int fd, Task* task) = 0;
+
+    // Register a listen task, waiting incoming connections on
+    // the specified file descriptor.
     virtual void Register(int fd, ListenTask* task) = 0;
+
+    // Stop listening on this file descriptor, and delete any
+    // task associated with it.
     virtual void Unregister(int fd) = 0;
   };
 
+
+  // Queue implementation that uses kqueue as an underlying
+  // implementation.
   class KQueueServer: public Queue {
   public:
     virtual void Register(Task* task);
@@ -43,6 +71,7 @@ namespace server {
     virtual void Unregister(int fd);
 
     void Initialize();
+
     void Run();
   private:
     static const char kZero;

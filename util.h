@@ -63,6 +63,7 @@ namespace util {
       pthread_mutex_unlock(&mutex_);
     };
 
+    // TODO: Should pull from the front
     T* Pop() {
       pthread_mutex_lock(&mutex_);
       T* value = data_.back();
