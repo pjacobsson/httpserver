@@ -8,6 +8,7 @@
 
 using namespace std;
 
+// Note to self: All templated classes need to be defined in the header file.
 namespace util {
 
   // Simple threadsafe map, storing keys and pointers to values.
