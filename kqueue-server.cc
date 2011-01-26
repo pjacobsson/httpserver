@@ -14,6 +14,8 @@ namespace server {
 
   const char KQueueServer::kZero = 0;
 
+  KQueueServer::KQueueServer() {}
+
   void KQueueServer::Register(Task* task) {
     log::Debug("Adding client task");
     ready_tasks_.Push(task);

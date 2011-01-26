@@ -15,6 +15,8 @@ namespace util {
   template<class K, class V>
   class SynchronizedMap {
   public:
+    SynchronizedMap() {};
+
     void Initialize() {
       pthread_mutex_init(&mutex_, NULL);
     };
@@ -47,12 +49,17 @@ namespace util {
   private:
     map<K, V*> data_;
     pthread_mutex_t mutex_;
+
+    SynchronizedMap(const SynchronizedMap&);
+    SynchronizedMap& operator=(const SynchronizedMap&);
   };
 
   // Simple threadsafe queue, storing pointers to values.
   template<class T>
   class SynchronizedQueue {
   public:
+    SynchronizedQueue() {};
+
     void Initialize() {
       pthread_mutex_init(&mutex_, NULL);
     };
@@ -84,6 +91,9 @@ namespace util {
   private:
     vector<T*> data_;
     pthread_mutex_t mutex_;
+
+    SynchronizedQueue(const SynchronizedQueue&);
+    SynchronizedQueue& operator=(const SynchronizedQueue&);
   };
 }
 

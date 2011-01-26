@@ -65,6 +65,7 @@ namespace server {
   // implementation.
   class KQueueServer: public Queue {
   public:
+    KQueueServer();
     virtual void Register(Task* task);
     virtual void Register(int fd, Task* task);
     virtual void Register(int fd, ListenTask* task);
