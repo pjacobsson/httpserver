@@ -62,7 +62,11 @@ namespace http_tasks {
     const HttpRequest& request = http_parser_->GetHttpRequest();
 
     const string status_line = "HTTP/1.1 200 OK\r\n";
-    const string response = "<h1>Hello, world!</h1>";
+    const string response = "<h1>Hello, world!</h1>"
+      "<form action='http://localhost:12345' method='post'>"
+      "<input type='text' name='value'/>"
+      "<input type='submit' value='Submit'/>"
+      "</form>";
     write(client_fd_, status_line.c_str(), status_line.length());
     write(client_fd_, "\r\n", 2);
     write(client_fd_, response.c_str(), response.length());

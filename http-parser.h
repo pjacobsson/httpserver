@@ -11,7 +11,7 @@ namespace http_parser {
 
   class HttpRequest {
   public:
-    enum request_type { GET, POST, PUT, DELETE };
+    enum request_type { UNSET, GET, POST, PUT, DELETE };
 
     HttpRequest();
 
@@ -40,10 +40,16 @@ namespace http_parser {
 		 PROTOCOL,
 		 HEADER_KEY,
 		 HEADER_DELIM,
-		 HEADER_VALUE };
+		 HEADER_VALUE,
+		 FORM_DATA };
 
     state current_state_;
     string field_;
+
+    string last_header_key_;
+    int content_length_;
+    int collected_content_length_;
+
     HttpRequest request_;
 
     HttpParser(const HttpParser&);
