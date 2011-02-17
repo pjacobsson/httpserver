@@ -3,6 +3,7 @@
 
 using namespace http_parser;
 
+// Testcases for the http parser.
 namespace http_parser_test {
 
   void TestGET() {
