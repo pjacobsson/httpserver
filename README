@@ -1,2 +1,5 @@
+Simple HTTP server. Uses asynchronous IO and mulitplexes requests over multiple threads.
+
+Probably only works on OS/X. Very incomplete and experimental.
 
 To compile: build.sh
