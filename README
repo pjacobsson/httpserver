@@ -2,6 +2,6 @@ This is a very simple HTTP server.
 
 It's written in C++ as an educational experiment. Uses asynchronous IO and mulitplexes tasks across multiple threads.
 
-Build using KQueue, so it probably only works on OS/X. At least it's only been tested on an old version of OS/X. Overall very incomplete (currently only supports GET requests, to start with). Probably has massive security holes.
+Built using kqueue and pthreads as the core mechanisms, but it probably only works on OS/X. At least it's only been tested on an old version of OS/X. Overall very incomplete (currently only supports GET requests, to start with). Probably has massive security holes.
 
 To compile: build.sh
